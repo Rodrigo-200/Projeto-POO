@@ -42,7 +42,7 @@ The Swing window opens at 800x600 with the exact title required. Use the combo b
   "campus": "Lisboa - Campus IPLuso",
   "sensor": "PT-SENSOR-LISBOA_CAMPUS_IPLUSO",
   "ID Unico": "PT-SENSOR-LISBOA_CAMPUS_IPLUSO",
-  "Owner": "Atualize_Nome_e_Numero",
+  "Owner": "a22508678_Rodrigo_Martins",
   "tipo": "temperatura",
   "valor": 24.73,
   "unidade": "Celsius",
@@ -51,8 +51,6 @@ The Swing window opens at 800x600 with the exact title required. Use the combo b
   "hash_validacao": "<sha256>"
 }
 ```
-
-Update the `Owner` string inside `SensorAbstrato` with your real first name, last name, and student number as requested by the rubric.
 
 ### Command Payload
 
