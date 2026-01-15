@@ -1,7 +1,9 @@
 package pt.monitorizapt.domain;
 
 /**
- * Known Portuguese locations requested by the assignment.
+ * Enum defining all valid locations in the system.
+ * This acts as the "Single Source of Truth" for location data.
+ * It maps user-friendly names (for the UI) to safe strings (for MQTT topics).
  */
 public enum SensorLocalizacao {
     LISBOA_CAMPUS_IPLUSO("Lisboa - Campus IPLuso", "Lisboa_Campus_IPLuso"),
@@ -20,6 +22,7 @@ public enum SensorLocalizacao {
         this.segmentoTopico = segmentoTopico;
     }
 
+    // Used in the UI (ComboBox, Table)
     public String descricao() {
         return descricao;
     }
@@ -28,14 +31,26 @@ public enum SensorLocalizacao {
         return segmentoTopico;
     }
 
+    /**
+     * Sanitizes the location name to be used as a unique ID in the JSON payload.
+     * Replaces spaces and dashes with underscores to ensure compatibility.
+     */
     public String idSegmento() {
         return segmentoTopico.replace("-", "_").replace(" ", "_").toUpperCase();
     }
 
+    /**
+     * Generates the MQTT topic for publishing data.
+     * Structure: envira/pt/sensores/dados/{Localizacao}
+     */
     public String topicoDados() {
         return "envira/pt/sensores/dados/" + segmentoTopico;
     }
 
+    /**
+     * Generates the MQTT topic for subscribing to remote commands.
+     * Structure: envira/pt/sensores/comandos/{Localizacao}
+     */
     public String topicoComandos() {
         return "envira/pt/sensores/comandos/" + segmentoTopico;
     }

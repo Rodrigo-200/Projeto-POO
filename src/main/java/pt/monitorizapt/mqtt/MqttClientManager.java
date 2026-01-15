@@ -1,14 +1,5 @@
 package pt.monitorizapt.mqtt;
 
-import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
-import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import pt.monitorizapt.domain.SensorLocalizacao;
-
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
@@ -17,9 +8,26 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
+import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+
+import pt.monitorizapt.domain.SensorLocalizacao;
+
+/**
+ * Manages the MQTT connection lifecycle.
+ * Wraps the Eclipse Paho library to provide a simpler, async API for the rest of the app.
+ */
 public class MqttClientManager {
     private final String brokerUrl;
+    // Unique ID prevents the broker from kicking us out if another client has the same name
     private final String clientId = "MonitorizaPT-" + UUID.randomUUID();
+    
+    // Thread-safe map to store command handlers (Topic -> Action)
     private final Map<String, Consumer<String>> commandHandlers = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<Consumer<Boolean>> connectionListeners = new CopyOnWriteArrayList<>();
 
@@ -29,6 +37,10 @@ public class MqttClientManager {
         this.brokerUrl = brokerUrl;
     }
 
+    /**
+     * Connects to the broker asynchronously.
+     * Crucial: We use CompletableFuture to avoid freezing the UI during network operations.
+     */
     public CompletableFuture<Void> connectAsync() {
         return CompletableFuture.runAsync(() -> {
             try {
@@ -43,11 +55,15 @@ public class MqttClientManager {
         if (client != null && client.isConnected()) {
             return;
         }
+        // MemoryPersistence is used because we don't need to save messages to disk if the app crashes
         client = new MqttClient(brokerUrl, clientId, new MemoryPersistence());
+        
+        // Callback to handle connection events (Loss/Recovery)
         client.setCallback(new MqttCallbackExtended() {
             @Override
             public void connectComplete(boolean reconnect, String serverURI) {
                 notifyConnection(true);
+                // If we reconnected automatically, we must re-subscribe to topics
                 reapplySubscriptions();
             }
 
@@ -58,7 +74,7 @@ public class MqttClientManager {
 
             @Override
             public void messageArrived(String topic, MqttMessage message) {
-                // handled via listener registration
+                // Handled individually via subscribeInternal listeners
             }
 
             @Override
@@ -67,7 +83,7 @@ public class MqttClientManager {
         });
 
         MqttConnectOptions options = new MqttConnectOptions();
-        options.setAutomaticReconnect(true);
+        options.setAutomaticReconnect(true); // Paho tries to reconnect automatically
         options.setCleanSession(true);
         options.setConnectionTimeout(10);
         options.setKeepAliveInterval(30);
@@ -77,6 +93,10 @@ public class MqttClientManager {
         reapplySubscriptions();
     }
 
+    /**
+     * Ensures that if the connection drops and comes back, we start listening 
+     * to the command topics again.
+     */
     private void reapplySubscriptions() {
         commandHandlers.forEach((topic, handler) -> subscribeInternal(topic, handler));
     }
@@ -84,9 +104,10 @@ public class MqttClientManager {
     public void publish(String topic, String payload) {
         try {
             if (client == null || !client.isConnected()) {
-                connectAsync();
+                connectAsync(); // Try to reconnect if disconnected
                 return;
             }
+            // QoS 0 (Fire and forget) is sufficient for sensor data
             client.publish(topic, payload.getBytes(StandardCharsets.UTF_8), 0, false);
         } catch (MqttException ignored) {
         }
@@ -102,13 +123,19 @@ public class MqttClientManager {
         if (client == null || !client.isConnected()) {
             return;
         }
-        IMqttMessageListener listener = (receivedTopic, message) -> handler.accept(new String(message.getPayload(), StandardCharsets.UTF_8));
+        // Listener that triggers the specific handler when a message arrives on this topic
+        IMqttMessageListener listener = (receivedTopic, message) -> 
+            handler.accept(new String(message.getPayload(), StandardCharsets.UTF_8));
+        
         try {
             client.subscribe(topic, listener);
         } catch (MqttException ignored) {
         }
     }
 
+    /**
+     * Async check used by the "Test Connection" button in the UI.
+     */
     public CompletableFuture<Boolean> testConnectionAsync() {
         return CompletableFuture.supplyAsync(() -> {
             if (isConnected()) {

@@ -1,11 +1,16 @@
 package pt.monitorizapt.ui;
 
-import pt.monitorizapt.service.SensorSnapshot;
-
-import javax.swing.table.AbstractTableModel;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import javax.swing.table.AbstractTableModel;
+
+import pt.monitorizapt.service.SensorSnapshot;
+
+/**
+ * Custom table model to display sensor snapshots.
+ * Uses a LinkedHashMap to keep rows ordered by insertion but allow fast updates by ID.
+ */
 public class SensorTableModel extends AbstractTableModel {
     private static final String[] COLUNAS = {"ID", "Localização", "Tipo", "Valor Atual", "Alerta"};
     private final LinkedHashMap<String, SensorSnapshot> linhas = new LinkedHashMap<>();
@@ -38,13 +43,19 @@ public class SensorTableModel extends AbstractTableModel {
         };
     }
 
+    /**
+     * Update or Insert (Upsert) a sensor row.
+     */
     public void upsert(SensorSnapshot snapshot) {
         boolean existente = linhas.containsKey(snapshot.id());
         linhas.put(snapshot.id(), snapshot);
         int rowIndex = indexOf(snapshot.id());
+        
         if (existente && rowIndex >= 0) {
+            // Efficiently notifies the view that only this specific row changed
             fireTableRowsUpdated(rowIndex, rowIndex);
         } else {
+            // Notify that structure might have changed (new row)
             fireTableDataChanged();
         }
     }

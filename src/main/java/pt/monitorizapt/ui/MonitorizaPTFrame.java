@@ -1,9 +1,12 @@
 package pt.monitorizapt.ui;
 
-import pt.monitorizapt.domain.SensorLocalizacao;
-import pt.monitorizapt.mqtt.MqttClientManager;
-import pt.monitorizapt.service.SensorController;
-import pt.monitorizapt.service.SensorSnapshot;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.concurrent.CompletableFuture;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -16,19 +19,22 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.util.concurrent.CompletableFuture;
 
+import pt.monitorizapt.domain.SensorLocalizacao;
+import pt.monitorizapt.mqtt.MqttClientManager;
+import pt.monitorizapt.service.SensorController;
+import pt.monitorizapt.service.SensorSnapshot;
+
+/**
+ * The main View class.
+ * It initializes the visual components and wires up the events from the Controller.
+ */
 public class MonitorizaPTFrame extends JFrame {
     private final SensorController controller;
     private final MqttClientManager mqttClientManager;
     private final SensorTableModel tableModel = new SensorTableModel();
 
+    // UI Components
     private final JLabel estadoMqttLabel = new JLabel("Estado MQTT: VERMELHO");
     private final JButton testarBrokerButton = new JButton("TESTAR BROKER");
     private final JComboBox<SensorLocalizacao> localizacaoCombo = new JComboBox<>(SensorLocalizacao.values());
@@ -50,8 +56,9 @@ public class MonitorizaPTFrame extends JFrame {
     private void configurarJanela() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
+        // BorderLayout divides container into North, South, East, West, Center
         setLayout(new BorderLayout(10, 10));
-        setLocationRelativeTo(null);
+        setLocationRelativeTo(null); // Centers on screen
 
         add(criarPainelNorte(), BorderLayout.NORTH);
         add(criarTabela(), BorderLayout.CENTER);
@@ -62,6 +69,7 @@ public class MonitorizaPTFrame extends JFrame {
         logArea.setWrapStyleWord(true);
         logArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
+        // Ensures threads stop cleanly when the window is closed
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -108,7 +116,13 @@ public class MonitorizaPTFrame extends JFrame {
         return painelSul;
     }
 
+    /**
+     * Connects UI events to Controller methods and listens for updates.
+     */
     private void registrarCallbacks() {
+        // CRITICAL: Data comes from background threads (Sensors/MQTT).
+        // Swing is NOT thread-safe. We must use invokeLater to update UI components
+        // on the Event Dispatch Thread (EDT).
         controller.registerSnapshotObserver(snapshot -> SwingUtilities.invokeLater(() -> atualizarTabela(snapshot)));
         controller.registerLogObserver(log -> SwingUtilities.invokeLater(() -> appendLog(log)));
         mqttClientManager.registerConnectionListener(conectado -> SwingUtilities.invokeLater(() -> atualizarEstado(conectado)));
@@ -125,7 +139,7 @@ public class MonitorizaPTFrame extends JFrame {
 
     private void appendLog(String linha) {
         logArea.append(linha + System.lineSeparator());
-        logArea.setCaretPosition(logArea.getDocument().getLength());
+        logArea.setCaretPosition(logArea.getDocument().getLength()); // Auto-scroll
     }
 
     private void atualizarEstado(boolean conectado) {
@@ -140,6 +154,7 @@ public class MonitorizaPTFrame extends JFrame {
 
     private void testarBroker() {
         testarBrokerButton.setEnabled(false);
+        // Perform network test asynchronously to prevent UI freezing
         CompletableFuture<Boolean> resultado = mqttClientManager.testConnectionAsync();
         resultado.whenComplete((conectado, erro) -> SwingUtilities.invokeLater(() -> {
             testarBrokerButton.setEnabled(true);

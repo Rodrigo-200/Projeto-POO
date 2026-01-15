@@ -1,7 +1,9 @@
 package pt.monitorizapt.domain;
 
 /**
- * Observer that reacts whenever a sensor publishes a payload.
+ * Observer interface.
+ * Any class that wants to react when a sensor publishes data (like the UI or Logger)
+ * must implement this method.
  */
 @FunctionalInterface
 public interface SensorUpdateListener {

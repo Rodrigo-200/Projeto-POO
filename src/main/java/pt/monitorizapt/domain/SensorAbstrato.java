@@ -12,6 +12,10 @@ import com.google.gson.JsonParseException;
 import pt.monitorizapt.mqtt.MqttClientManager;
 import pt.monitorizapt.util.JsonPayloadBuilder;
 
+/**
+ * Base implementation handling the threading loop and MQTT logic.
+ * Subclasses only need to implement 'gerarDadosEspecificos'.
+ */
 public abstract class SensorAbstrato implements Sensor, Runnable {
     private static final long INTERVALO_PADRAO = 3333L;
     private static final String OWNER_IDENTIFICADOR = "Rodrigo_Martins_a22508678";
@@ -21,9 +25,13 @@ public abstract class SensorAbstrato implements Sensor, Runnable {
     private final SensorLocalizacao localizacaoFixa;
     private final JsonPayloadBuilder payloadBuilder;
     private final MqttClientManager mqttClientManager;
+    
+    // Thread-safe list for UI listeners
     private final List<SensorUpdateListener> listeners = new CopyOnWriteArrayList<>();
+    // Atomic flag ensures safe thread termination
     private final AtomicBoolean loopAtivo = new AtomicBoolean(false);
 
+    // 'volatile' ensures visibility of changes across different threads immediately
     private volatile boolean ativo;
     private volatile long intervaloMillis = INTERVALO_PADRAO;
     private volatile DadosSensor ultimaLeitura;
@@ -68,6 +76,7 @@ public abstract class SensorAbstrato implements Sensor, Runnable {
                 default -> {
                 }
             }
+            // Updates interval only if valid (>= 1s) to prevent flooding
             if (objeto.has("intervalo")) {
                 long novoIntervalo = objeto.get("intervalo").getAsLong();
                 if (novoIntervalo >= 1000L) {
@@ -130,9 +139,10 @@ public abstract class SensorAbstrato implements Sensor, Runnable {
 
     @Override
     public void iniciar() {
+        // compareAndSet ensures we don't start two threads for the same sensor
         if (loopAtivo.compareAndSet(false, true)) {
             worker = new Thread(this, getIDUnico() + "-loop");
-            worker.setDaemon(true);
+            worker.setDaemon(true); // Daemon threads allow JVM to exit if UI is closed
             worker.start();
         }
     }
@@ -163,12 +173,12 @@ public abstract class SensorAbstrato implements Sensor, Runnable {
                     publicarMQTT(payload);
                     notificar(leitura, payload);
                 }
-                Thread.sleep(intervaloMillis); // requirement: while(true) + sleep(3333)
+                Thread.sleep(intervaloMillis); 
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception ex) {
-                // Keep loop alive even if a single publication fails.
+                // Keep loop alive even if a single publication fails
             }
         }
     }
