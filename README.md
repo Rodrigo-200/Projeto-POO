@@ -110,7 +110,4 @@ Send this to `envira/pt/sensores/comandos/<Location>` to control the app remotel
 | **Course** | Object Oriented Programming |
 | **Hash Algorithm** | SHA-256 |
 | **Persistence** | CSV (ISO-8601 Standards) |
-
-*This project was validated and finalized for the academic year 2025/2026.*
-
 </details>
