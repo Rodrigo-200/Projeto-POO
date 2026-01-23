@@ -11,7 +11,7 @@
 
 The goal was to simulate a network of environmental sensors spread across Portugal. The app generates realistic data (temperature, humidity, air quality), sends it to an MQTT Broker, and visualizes everything in a real-time Swing Dashboard.
 
-> **Note to Evaluators:** This repository represents the **final, optimized iteration** of the project authored by **Rodrigo Martins**. While earlier development snapshots may have been shared within study groups for collaborative learning, this codebase contains specific architectural refinements and UI polishes unique to this submission.
+> **Note to teacher:** This repository represents the **final, optimized iteration** of the project authored by me **Rodrigo Martins**. While earlier development versions may have been shared within study groups for collaborative learning, this codebase contains specific architectural refinements and UI polishes unique to this submission.
 
 ---
 
@@ -108,14 +108,11 @@ Send this to `envira/pt/sensores/comandos/<Location>` to control the app remotel
 | **Author** | Rodrigo Martins |
 | **Student ID** | a22508678 |
 | **Course** | Object Oriented Programming |
-| **Version** | 1.0.0-Final |
 | **Hash Algorithm** | SHA-256 |
 | **Persistence** | CSV (ISO-8601 Standards) |
 
 *This project was validated and finalized for the academic year 2025/2026.*
 
 </details>
-
-```
 
 ```
