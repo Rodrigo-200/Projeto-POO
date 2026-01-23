@@ -39,9 +39,11 @@ public class SensorController {
     
     private final JsonPayloadBuilder payloadBuilder = new JsonPayloadBuilder();
     private final MqttClientManager mqttClientManager;
+    private final CsvLogService csvLogService;
 
     public SensorController(MqttClientManager mqttClientManager) {
         this.mqttClientManager = mqttClientManager;
+        this.csvLogService = new CsvLogService();
         
         // Initialize all sensors immediately
         criarSensores();
@@ -98,6 +100,9 @@ public class SensorController {
             
             // Notify the Log text area
             log(String.format("Sensor %s publicou %s", sensor.getIDUnico(), formatValor(sensor.getTipo(), dados)));
+
+            // Log to CSV file
+            csvLogService.registarLeitura(snapshot);
         };
     }
 

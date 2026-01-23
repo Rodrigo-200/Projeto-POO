@@ -25,7 +25,8 @@ import pt.monitorizapt.domain.SensorLocalizacao;
 public class MqttClientManager {
     private final String brokerUrl;
     // Unique ID prevents the broker from kicking us out if another client has the same name
-    private final String clientId = "MonitorizaPT-" + UUID.randomUUID();
+    // RM = Rodrigo Martins
+    private final String clientId = "MonitorizaPT_RM_" + UUID.randomUUID();
     
     // Thread-safe map to store command handlers (Topic -> Action)
     private final Map<String, Consumer<String>> commandHandlers = new ConcurrentHashMap<>();
